@@ -20,7 +20,7 @@ from tensorboardX import SummaryWriter
 parser = argparse.ArgumentParser(description='Structure from Motion Learner training on KITTI and CityScapes Dataset',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('data', metavar='DIR',
+parser.add_argument('--data', metavar='DIR',
                     help='path to dataset')
 parser.add_argument('--dataset-format', default='sequential', metavar='STR',
                     help='dataset format, stacked: stacked frames (from original TensorFlow code) '
