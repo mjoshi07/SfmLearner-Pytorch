@@ -16,7 +16,7 @@ class SSIMLoss(SSIM):
 def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                     depth, explainability_mask, pose,
                                     rotation_mode='euler', padding_mode='zeros'):
-    ssim_loss_fun = SSIMLoss()
+    ssim_loss_fun = SSIMLoss().cuda()
     def one_scale(depth, explainability_mask):
         assert(explainability_mask is None or depth.size()[2:] == explainability_mask.size()[2:])
         assert(pose.size(1) == len(ref_imgs))
