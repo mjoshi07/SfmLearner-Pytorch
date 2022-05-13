@@ -11,7 +11,7 @@ import custom_transforms
 import models
 from utils import tensor2array, save_checkpoint, save_path_formatter, log_output_tensorboard
 
-from loss_functions import photometric_reconstruction_loss, explainability_loss, smooth_loss
+from loss_functions import photometric_reconstruction_loss, explainability_loss, smooth_loss, SSIMLoss
 from loss_functions import compute_depth_errors, compute_pose_errors
 from inverse_warp import pose_vec2mat
 from logger import TermLogger, AverageMeter
@@ -66,9 +66,10 @@ parser.add_argument('--log-summary', default='progress_log_summary.csv', metavar
                     help='csv where to save per-epoch train and valid stats')
 parser.add_argument('--log-full', default='progress_log_full.csv', metavar='PATH',
                     help='csv where to save per-gradient descent train stats')
-parser.add_argument('-p', '--photo-loss-weight', type=float, help='weight for photometric loss', metavar='W', default=1)
+parser.add_argument('-p', '--photo-loss-weight', type=float, help='weight for photometric loss', metavar='W', default=0.7)
 parser.add_argument('-m', '--mask-loss-weight', type=float, help='weight for explainabilty mask loss', metavar='W', default=0)
-parser.add_argument('-s', '--smooth-loss-weight', type=float, help='weight for disparity smoothness loss', metavar='W', default=0.1)
+parser.add_argument('-s', '--smooth-loss-weight', type=float, help='weight for disparity smoothness loss', metavar='W', default=0.2)
+parser.add_argument('-i', '--ssim-loss-weight', type=float, help='weight for structural similarity loss', metavar='W', default=0.1)
 parser.add_argument('--log-output', action='store_true', help='will log dispnet outputs and warped imgs at validation step')
 parser.add_argument('-f', '--training-output-freq', type=int,
                     help='frequence for outputting dispnet outputs and warped imgs at training for all scales. '
@@ -263,7 +264,7 @@ def train(args, train_loader, disp_net, pose_exp_net, optimizer, epoch_size, log
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter(precision=4)
-    w1, w2, w3 = args.photo_loss_weight, args.mask_loss_weight, args.smooth_loss_weight
+    w1, w2, w3, w4 = args.photo_loss_weight, args.mask_loss_weight, args.smooth_loss_weight, args.ssim_loss_weight
 
     # switch to train mode
     disp_net.train()
@@ -271,6 +272,10 @@ def train(args, train_loader, disp_net, pose_exp_net, optimizer, epoch_size, log
 
     end = time.time()
     logger.train_bar.update(0)
+
+    # ssim_loss_fun = SSIMLoss()
+
+    torch.autograd.set_detect_anomaly(True)
 
     for i, (tgt_img, ref_imgs, intrinsics, intrinsics_inv) in enumerate(train_loader):
         log_losses = i > 0 and n_iter % args.print_freq == 0
@@ -287,7 +292,7 @@ def train(args, train_loader, disp_net, pose_exp_net, optimizer, epoch_size, log
         depth = [1/disp for disp in disparities]
         explainability_mask, pose = pose_exp_net(tgt_img, ref_imgs)
 
-        loss_1, warped, diff = photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
+        loss_1, warped, diff, loss_4 = photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                                                depth, explainability_mask, pose,
                                                                args.rotation_mode, args.padding_mode)
         if w2 > 0:
@@ -295,15 +300,18 @@ def train(args, train_loader, disp_net, pose_exp_net, optimizer, epoch_size, log
         else:
             loss_2 = 0
         loss_3 = smooth_loss(depth)
+        # loss_4 = ssim_loss_fun(tgt_img, ref_imgs)
 
-        loss = w1*loss_1 + w2*loss_2 + w3*loss_3
+        loss = w1*loss_1 + w2*loss_2 + w3*loss_3 + w4*loss_4
 
         if log_losses:
             tb_writer.add_scalar('photometric_error', loss_1.item(), n_iter)
+            tb_writer.add_scalar('ssim_loss', loss_4.item(), n_iter)
             if w2 > 0:
                 tb_writer.add_scalar('explanability_loss', loss_2.item(), n_iter)
             tb_writer.add_scalar('disparity_smoothness_loss', loss_3.item(), n_iter)
             tb_writer.add_scalar('total_loss', loss.item(), n_iter)
+
 
         if log_output:
             tb_writer.add_image('train Input', tensor2array(tgt_img[0]), n_iter)

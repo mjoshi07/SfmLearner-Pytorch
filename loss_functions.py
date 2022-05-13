@@ -6,9 +6,17 @@ import torch.nn.functional as F
 from inverse_warp import inverse_warp
 
 
+from piqa import SSIM
+
+class SSIMLoss(SSIM):
+    def forward(self, x, y):
+        return 1. - super().forward(x, y)
+
+
 def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                     depth, explainability_mask, pose,
                                     rotation_mode='euler', padding_mode='zeros'):
+    ssim_loss_fun = SSIMLoss()
     def one_scale(depth, explainability_mask):
         assert(explainability_mask is None or depth.size()[2:] == explainability_mask.size()[2:])
         assert(pose.size(1) == len(ref_imgs))
@@ -23,7 +31,7 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
 
         warped_imgs = []
         diff_maps = []
-
+        ssim_loss = 0.0
         for i, ref_img in enumerate(ref_imgs_scaled):
             current_pose = pose[:, i]
 
@@ -31,6 +39,11 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                                         intrinsics_scaled,
                                                         rotation_mode, padding_mode)
             diff = (tgt_img_scaled - ref_img_warped) * valid_points.unsqueeze(1).float()
+            
+            ssim_ref_img_warped = torch.abs(ref_img_warped)
+            ssim_ref_img_warped /= torch.max(ssim_ref_img_warped)
+
+            ssim_loss += ssim_loss_fun(ssim_ref_img_warped, torch.abs(tgt_img_scaled)).item()
 
             if explainability_mask is not None:
                 diff = diff * explainability_mask[:,i:i+1].expand_as(diff)
@@ -41,7 +54,7 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
             warped_imgs.append(ref_img_warped[0])
             diff_maps.append(diff[0])
 
-        return reconstruction_loss, warped_imgs, diff_maps
+        return reconstruction_loss, warped_imgs, diff_maps, ssim_loss
 
     warped_results, diff_results = [], []
     if type(explainability_mask) not in [tuple, list]:
@@ -50,12 +63,14 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
         depth = [depth]
 
     total_loss = 0
+    total_ssim_loss = 0.0
     for d, mask in zip(depth, explainability_mask):
-        loss, warped, diff = one_scale(d, mask)
+        loss, warped, diff, ssim_loss = one_scale(d, mask)
         total_loss += loss
+        total_ssim_loss += ssim_loss
         warped_results.append(warped)
         diff_results.append(diff)
-    return total_loss, warped_results, diff_results
+    return total_loss, warped_results, diff_results, total_ssim_loss
 
 
 def explainability_loss(mask):
