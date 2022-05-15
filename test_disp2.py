@@ -128,10 +128,9 @@ def main():
         plt.axis("tight")  # gets rid of white border
         plt.axis("image")  # square up the image instead of filling the "figure" space
         fig.tight_layout()
-        # plt.show()
         plt.gca().xaxis.set_major_locator(plt.NullLocator())
         plt.gca().yaxis.set_major_locator(plt.NullLocator())
-        # plt.savefig(os.path.join(output_dir, basename + "output_stacked.png"), dpi=500,bbox_inches='tight',pad_inches = 0)
+        plt.savefig(os.path.join(output_dir, basename + "output_stacked.png"), dpi=500,bbox_inches='tight',pad_inches = 0)
         
         scale_factor1 = np.median(gt_depth)/np.median(pred_depth1)
         errors[0,:,j] = compute_errors(1 / scale_factor1 *gt_depth, scale_factor1 * pred_depth1)
