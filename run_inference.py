@@ -7,7 +7,7 @@ from path import Path
 import argparse
 from tqdm import tqdm
 
-from models import DispNetS
+from models import DispNetS, DispNetS2
 from utils import tensor2array
 
 parser = argparse.ArgumentParser(description='Inference script for DispNet learned with \
@@ -24,7 +24,7 @@ parser.add_argument("--dataset-list", default=None, type=str, help="Dataset list
 parser.add_argument("--dataset-dir", default='.', type=str, help="Dataset directory")
 parser.add_argument("--output-dir", default='output', type=str, help="Output directory")
 
-parser.add_argument("--img-exts", default=['png', 'jpg', 'bmp'], nargs='*', type=str, help="images extensions to glob")
+parser.add_argument("--img-exts", default=['png', 'jpeg', 'bmp'], nargs='*', type=str, help="images extensions to glob")
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -36,8 +36,8 @@ def main():
         print('You must at least output one value !')
         return
 
-    disp_net = DispNetS().to(device)
-    weights = torch.load(args.pretrained)
+    disp_net = DispNetS2().to(device)
+    weights = torch.load(args.pretrained, map_location='cpu')
     disp_net.load_state_dict(weights['state_dict'])
     disp_net.eval()
 
@@ -52,7 +52,7 @@ def main():
         test_files = sum([list(dataset_dir.walkfiles('*.{}'.format(ext))) for ext in args.img_exts], [])
 
     print('{} files to test'.format(len(test_files)))
-
+    print(test_files)
     for file in tqdm(test_files):
 
         img = imread(file)

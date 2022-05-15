@@ -4,19 +4,12 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from inverse_warp import inverse_warp
-
-
-from piqa import SSIM
-
-class SSIMLoss(SSIM):
-    def forward(self, x, y):
-        return 1. - super().forward(x, y)
+from skimage.metrics import structural_similarity as ssim
 
 
 def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                     depth, explainability_mask, pose,
                                     rotation_mode='euler', padding_mode='zeros'):
-    ssim_loss_fun = SSIMLoss().cuda()
     def one_scale(depth, explainability_mask):
         assert(explainability_mask is None or depth.size()[2:] == explainability_mask.size()[2:])
         assert(pose.size(1) == len(ref_imgs))
@@ -40,10 +33,10 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
                                                         rotation_mode, padding_mode)
             diff = (tgt_img_scaled - ref_img_warped) * valid_points.unsqueeze(1).float()
             
-            ssim_ref_img_warped = torch.abs(ref_img_warped)
-            ssim_ref_img_warped /= torch.max(ssim_ref_img_warped)
+            ssim_ref_img = np.transpose(ref_img_warped[0].detach().cpu().numpy().copy(), (1,2,0)) 
+            ssim_tgt_img = np.transpose(tgt_img_scaled[0].detach().cpu().numpy().copy(), (1, 2, 0))
 
-            ssim_loss += ssim_loss_fun(ssim_ref_img_warped, torch.abs(tgt_img_scaled)).item()
+            ssim_loss += 0.5*ssim(ssim_tgt_img, ssim_ref_img, data_range=ssim_tgt_img.max() - ssim_tgt_img.min(), multichannel=True)
 
             if explainability_mask is not None:
                 diff = diff * explainability_mask[:,i:i+1].expand_as(diff)
@@ -67,7 +60,7 @@ def photometric_reconstruction_loss(tgt_img, ref_imgs, intrinsics,
     for d, mask in zip(depth, explainability_mask):
         loss, warped, diff, ssim_loss = one_scale(d, mask)
         total_loss += loss
-        total_ssim_loss += ssim_loss
+        total_ssim_loss += (1 - ssim_loss)
         warped_results.append(warped)
         diff_results.append(diff)
     return total_loss, warped_results, diff_results, total_ssim_loss
