@@ -95,11 +95,11 @@ class GaussianNoise(object):
         return images, intrinsics
 
 
-class RandomColor(object):
+class ColorJitter(object):
     """Randomly changes the color, saturation and hue of the images"""
 
     def __init__(self):
-        self.transform = transforms.RandomColor()
+        self.transform = transforms.ColorJitter()
 
     def __call__(self, images, intrinsics):
         if random.random() < 0.5:
