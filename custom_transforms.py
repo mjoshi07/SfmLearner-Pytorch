@@ -82,3 +82,26 @@ class RandomScaleCrop(object):
         output_intrinsics[1,2] -= offset_y
 
         return cropped_images, output_intrinsics
+
+
+class GaussianNoise(object):
+    """Randomly adds gaussian blur to the images"""
+
+    def __call__(self, images, intrinsics):
+        if random.random() < 0.5:
+            for image in images:
+                image = image + (0.1 ** 0.5) * torch.randn(image.shape)
+        return images, intrinsics
+
+
+class RandomColor(object):
+    """Randomly changes the color, saturation and hue of the images"""
+
+    def __init__(self):
+        self.transform = transforms.RandomColor()
+
+    def __call__(self, images, intrinsics):
+        if random.random() < 0.5:
+            for image in images:
+                image = self.transform(image)
+        return images, intrinsics
