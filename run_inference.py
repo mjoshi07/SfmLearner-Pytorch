@@ -21,7 +21,7 @@ parser.add_argument("--img-width", default=416, type=int, help="Image width")
 parser.add_argument("--no-resize", action='store_true', help="no resizing is done")
 
 parser.add_argument("--dataset-list", default=None, type=str, help="Dataset list file")
-parser.add_argument("--dataset-dir", default='.', type=str, help="Dataset directory")
+parser.add_argument("--dataset-dir", default='./misc', type=str, help="Dataset directory")
 parser.add_argument("--output-dir", default='output', type=str, help="Output directory")
 
 parser.add_argument("--img-exts", default=['png', 'jpeg', 'bmp'], nargs='*', type=str, help="images extensions to glob")
@@ -53,9 +53,9 @@ def main():
 
     print('{} files to test'.format(len(test_files)))
     print(test_files)
-    for file in tqdm(test_files):
+    for file_ in tqdm(test_files):
 
-        img = imread(file)
+        img = imread(file_)
 
         h,w,_ = img.shape
         if (not args.no_resize) and (h != args.img_height or w != args.img_width):
@@ -66,8 +66,9 @@ def main():
         tensor_img = ((tensor_img - 0.5)/0.5).to(device)
 
         output = disp_net(tensor_img)[0]
+        tensor_img = None
 
-        file_path, file_ext = file.relpath(args.dataset_dir).splitext()
+        file_path, file_ext = file_.relpath(args.dataset_dir).splitext()
         file_name = '-'.join(file_path.splitall()[1:])
 
         if args.output_disp:

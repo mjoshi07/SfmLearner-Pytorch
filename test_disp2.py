@@ -76,6 +76,7 @@ def main():
         input_img = imread(os.path.join(rgb_images, file))
         gt = imread(os.path.join(gt_images, gt_filename))
         gt = resize(gt, (args.img_height, args.img_width))
+        gt = gt.astype(np.float32)
 
         h,w,_ = input_img.shape
         if (not args.no_resize) and (h != args.img_height or w != args.img_width):
@@ -95,7 +96,9 @@ def main():
         disp2 = np.transpose(disp2, (1,2,0))[:, :, 0]
         pred_depth2 = 1/(disp2 + EPSILON)
 
-        gt_depth = 1/(gt + EPSILON)
+        gt_depth = (0.209313 * 2262.52)/(gt + EPSILON)
+        disp1 = (0.209313 * 2262.52)/(disp1 + EPSILON)
+        disp2 = (0.209313 * 2262.52)/(disp2 + EPSILON)
 
         fig = plt.figure()
 
@@ -109,7 +112,7 @@ def main():
         fig.tight_layout()
 
         fig.add_subplot(4, 1, 2)
-        plt.imshow(gt, cmap='gray')
+        plt.imshow(gt_depth, cmap='gray')
         plt.axis("off")   # turns off axes
         plt.axis("tight")  # gets rid of white border
         plt.axis("image")  # square up the image instead of filling the "figure" space
@@ -128,19 +131,27 @@ def main():
         plt.axis("tight")  # gets rid of white border
         plt.axis("image")  # square up the image instead of filling the "figure" space
         fig.tight_layout()
-        plt.gca().xaxis.set_major_locator(plt.NullLocator())
-        plt.gca().yaxis.set_major_locator(plt.NullLocator())
-        plt.savefig(os.path.join(output_dir, basename + "output_stacked.png"), dpi=500,bbox_inches='tight',pad_inches = 0)
-        
-        scale_factor1 = np.median(gt_depth)/np.median(pred_depth1)
-        errors[0,:,j] = compute_errors(1 / scale_factor1 *gt_depth, scale_factor1 * pred_depth1)
+        # plt.gca().xaxis.set_major_locator(plt.NullLocator())
+        # plt.gca().yaxis.set_major_locator(plt.NullLocator())
+        # plt.show()
+        # plt.savefig(os.path.join(output_dir, basename + "output_stacked.png"), dpi=500,bbox_inches='tight',pad_inches = 0)
+        plt.clf()
 
-        scale_factor2 = np.median(gt_depth)/np.median(pred_depth2)
-        errors[1,:,j] = compute_errors(1 / scale_factor2 * gt_depth, scale_factor2 * pred_depth2)
+        # scale_factor1 = np.median(gt_depth)/np.median(pred_depth1)
+        # errors[0,:,j] = compute_errors(1 / scale_factor1 *gt_depth, scale_factor1 * pred_depth1)
+
+        # scale_factor2 = np.median(gt_depth)/np.median(pred_depth2)
+        # errors[1,:,j] = compute_errors(1 / scale_factor2 * gt_depth, scale_factor2 * pred_depth2)
+
+        scale_factor1 = np.median(gt_depth)/np.median(disp1)
+        errors[0,:,j] = compute_errors(disp1, disp2)
+
+        # scale_factor2 = np.median(gt_depth)/np.median(disp2)
+        # errors[1,:,j] = compute_errors(gt_depth, scale_factor2*disp2)
 
     mean_errors = errors.mean(2)
-    print(mean_errors[0][:4])
-    print(mean_errors[1][:4])
+    print(mean_errors[0])
+    # print(mean_errors[1][:4])
 
  
 def compute_errors(gt, pred):
