@@ -104,6 +104,8 @@ def main():
         custom_transforms.RandomHorizontalFlip(),
         custom_transforms.RandomScaleCrop(),
         custom_transforms.ArrayToTensor(),
+        custom_transforms.GaussianNoise(),
+        custom_transforms.RandomColor(),
         normalize
     ])
 

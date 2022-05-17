@@ -7,7 +7,7 @@ from path import Path
 import argparse
 from tqdm import tqdm
 
-from models import DispNetS, PoseExpNet
+from models import DispNetS, DispNetS2, PoseExpNet
 
 
 parser = argparse.ArgumentParser(description='Script for DispNet testing with corresponding groundTruth',
@@ -40,8 +40,8 @@ def main():
     elif args.gt_type == 'stillbox':
         from stillbox_eval.depth_evaluation_utils import test_framework_stillbox as test_framework
 
-    disp_net = DispNetS().to(device)
-    weights = torch.load(args.pretrained_dispnet)
+    disp_net = DispNetS2().to(device)
+    weights = torch.load(args.pretrained_dispnet,map_location='cpu')
     disp_net.load_state_dict(weights['state_dict'])
     disp_net.eval()
 
