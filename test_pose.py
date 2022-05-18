@@ -13,7 +13,7 @@ from inverse_warp import pose_vec2mat
 
 parser = argparse.ArgumentParser(description='Script for PoseNet testing with corresponding groundTruth from KITTI Odometry',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("pretrained_posenet", type=str, help="pretrained PoseNet path")
+parser.add_argument("--pretrained", type=str, help="pretrained PoseNet path")
 parser.add_argument("--img-height", default=128, type=int, help="Image height")
 parser.add_argument("--img-width", default=416, type=int, help="Image width")
 parser.add_argument("--no-resize", action='store_true', help="no resizing is done")
@@ -21,7 +21,7 @@ parser.add_argument("--min-depth", default=1e-3)
 parser.add_argument("--max-depth", default=80)
 
 parser.add_argument("--dataset-dir", default='.', type=str, help="Dataset directory")
-parser.add_argument("--sequences", default=['09'], type=str, nargs='*', help="sequences to test")
+parser.add_argument("--sequences", default=['04'], type=str, nargs='*', help="sequences to test")
 parser.add_argument("--output-dir", default=None, type=str, help="Output directory for saving predictions in a big 3D numpy file")
 parser.add_argument("--img-exts", default=['png', 'jpg', 'bmp'], nargs='*', type=str, help="images extensions to glob")
 parser.add_argument("--rotation-mode", default='euler', choices=['euler', 'quat'], type=str)
@@ -33,8 +33,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 def main():
     args = parser.parse_args()
     from kitti_eval.pose_evaluation_utils import test_framework_KITTI as test_framework
-
-    weights = torch.load(args.pretrained_posenet)
+    weights = torch.load(args.pretrained, map_location='cpu')
     seq_length = int(weights['state_dict']['conv1.0.weight'].size(1)/3)
     pose_net = PoseExpNet(nb_ref_imgs=seq_length - 1, output_exp=False).to(device)
     pose_net.load_state_dict(weights['state_dict'], strict=False)
