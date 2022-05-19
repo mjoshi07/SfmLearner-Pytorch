@@ -7,7 +7,7 @@ from path import Path
 import argparse
 from tqdm import tqdm
 
-from models import PoseExpNet
+from models import PoseExpNet, PoseExpNet2 
 from inverse_warp import pose_vec2mat
 
 
@@ -21,7 +21,7 @@ parser.add_argument("--min-depth", default=1e-3)
 parser.add_argument("--max-depth", default=80)
 
 parser.add_argument("--dataset-dir", default='.', type=str, help="Dataset directory")
-parser.add_argument("--sequences", default=['04'], type=str, nargs='*', help="sequences to test")
+parser.add_argument("--sequences", default=['07'], type=str, nargs='*', help="sequences to test")
 parser.add_argument("--output-dir", default=None, type=str, help="Output directory for saving predictions in a big 3D numpy file")
 parser.add_argument("--img-exts", default=['png', 'jpg', 'bmp'], nargs='*', type=str, help="images extensions to glob")
 parser.add_argument("--rotation-mode", default='euler', choices=['euler', 'quat'], type=str)
